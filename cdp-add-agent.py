@@ -1,58 +1,18 @@
 #!/usr/bin/env python
 
-import suds.client
 import logging
+from r1soft.cdp3 import MetaClient, create_basic_option_parser, format_wsdl_url
 
 logger = logging.getLogger('cdp-add-agent')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 logger.propagate = False
 
-class MetaClient(object):
-    def __init__(self, url_base, **kwargs):
-        self.__url_base = url_base
-        self.__init_args = kwargs
-        self.__clients = dict()
-
-    def __getattr__(self, name):
-        c = self.__clients.get(name, None)
-        logger.debug('Accessing SOAP client: %s' % name)
-        if c is None:
-            logger.debug('Client doesn\'t exist, creating: %s' % name)
-            c = suds.client.Client(self.__url_base % name, **self.__init_args)
-            self.__clients[name] = c
-        return c
-
-def get_wsdl_url(hostname, namespace, use_ssl=True, port_override=None):
-    if use_ssl:
-        proto = 'https'
-    else:
-        proto = 'http'
-    if port_override is None:
-        if use_ssl:
-            port = 9443
-        else:
-            port = 9080
-    else:
-        port = port_override
-    url = '%s://%s:%d/%s?wsdl' % (proto, hostname, port, namespace)
-    logging.debug('Creating WSDL URL: %s' % url)
-    return url
-
 if __name__ == '__main__':
     import sys
-    import optparse
     import os
 
-    parser = optparse.OptionParser()
-    parser.add_option('-r', '--r1soft-host', dest='cdp_host',
-        help='R1Soft server to add host to')
-    parser.add_option('-u', '--username', dest='username',
-        default=os.environ.get('CDP_USER', 'admin'),
-        help='R1Soft server API username')
-    parser.add_option('-p', '--password', dest='password',
-        default=os.environ.get('CDP_PASS', ''),
-        help='R1Soft server API password')
+    parser = r1soft.cdp3.create_basic_option_parser()
     parser.add_option('-d', '--description', dest='description',
         default=None,
         help='Custom description field, default is the same as hostname, applied to all hosts')
@@ -68,7 +28,7 @@ if __name__ == '__main__':
         help='Number of recovery points to keep')
     options, args = parser.parse_args()
 
-    cdp_host = options.cdp_host
+    cdp_host = options.hostname
     username = options.username
     password = options.password
     use_db_addon = options.use_db_addon
@@ -82,7 +42,7 @@ if __name__ == '__main__':
             description = '%s (%s)' % (options.description, hostname)
         logger.info('Setting up backups for host (%s) on CDP server (%s) with description: %s',
             hostname, cdp_host, description)
-        client = MetaClient(get_wsdl_url(cdp_host, '%s'),
+        client = MetaClient(format_wsdl_url(cdp_host, '%s'),
             username=username, password=password)
         logger.debug('Creating special types...')
         CompressionType = client.DiskSafe.factory.create('diskSafe.compressionType')
