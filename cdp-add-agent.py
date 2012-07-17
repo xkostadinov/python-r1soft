@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import logging
-from r1soft.cdp3 import MetaClient, create_basic_option_parser, format_wsdl_url
+import r1soft
 
 logger = logging.getLogger('cdp-add-agent')
 logger.addHandler(logging.StreamHandler())
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     import sys
     import os
 
-    parser = r1soft.cdp3.create_basic_option_parser()
+    parser = r1soft.create_basic_option_parser()
     parser.add_option('-d', '--description', dest='description',
         default=None,
         help='Custom description field, default is the same as hostname, applied to all hosts')
@@ -42,7 +42,7 @@ if __name__ == '__main__':
             description = '%s (%s)' % (options.description, hostname)
         logger.info('Setting up backups for host (%s) on CDP server (%s) with description: %s',
             hostname, cdp_host, description)
-        client = MetaClient(format_wsdl_url(cdp_host, '%s'),
+        client = r1soft.cdp3.MetaClient(r1soft.cdp3.format_wsdl_url(cdp_host, '%s'),
             username=username, password=password)
         logger.debug('Creating special types...')
         CompressionType = client.DiskSafe.factory.create('diskSafe.compressionType')
